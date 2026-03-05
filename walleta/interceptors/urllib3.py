@@ -12,7 +12,13 @@ from walleta.context import _get_current_context
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
 
-_orig_urlopen = urllib3.connectionpool.HTTPConnectionPool.urlopen
+try:
+    import urllib3
+    _orig_urlopen = urllib3.connectionpool.HTTPConnectionPool.urlopen
+
+except ImportError:
+    urllib3 = None
+    _orig_urlopen = None
 
 
 def _patch_response_read(handler: ResponseHandler, response, ctx) -> None:
@@ -22,10 +28,11 @@ def _patch_response_read(handler: ResponseHandler, response, ctx) -> None:
         chunk = orig_read(*args, **kwargs)
         if chunk:
             handler.handle_chunk(chunk)
+
         else:  # EOF
             event = handler.finalize()
             if event:
-                cxt.add_usage(event)
+                ctx.add_usage(event)
         return chunk
 
     response.read = read
@@ -38,8 +45,10 @@ def _patch_response_close(handler: ResponseHandler, response, ctx) -> None:
             response.read()
         event = handler.finalize()
         if event:
-            ctx.send_usage(event)
+            ctx.add_usage(event)
         return orig_close(*args, **kwargs)
+
+    response.close = close
 
 
 def _patched_urlopen(self, method, url, *args, **kwargs):
@@ -51,7 +60,7 @@ def _patched_urlopen(self, method, url, *args, **kwargs):
         return response
 
     http_data = HttpData(
-        host=response.url.host,
+        host=self.host,
         method=method,
         url=str(response.url),
         request_headers=dict(kwargs.get("headers") or {}),
@@ -59,7 +68,7 @@ def _patched_urlopen(self, method, url, *args, **kwargs):
         response_status=response.status,
         response_headers=dict(response.headers),
         response_body=None,
-        duration=duration,
+        duration=t.seconds,
     )
     handler = extractors.search(http_data)
     if handler is None:
@@ -71,6 +80,9 @@ def _patched_urlopen(self, method, url, *args, **kwargs):
 
 @register
 def install_urllib3():
+    if urllib3 is None:
+        return
+
     if urllib3.connectionpool.HTTPConnectionPool.urlopen == _patched_urlopen:
         return
 

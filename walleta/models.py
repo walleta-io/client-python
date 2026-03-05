@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Optional, Any
 
 
 @dataclass
@@ -9,7 +9,7 @@ class HttpData:
     url: str = None
     request_headers: dict[str, Any] = field(default_factory=dict)
     request_body: bytes = None
-    response_status: int
+    response_status: Optional[int] = None
     response_headers: dict[str, Any] = field(default_factory=dict)
     duration: float = 0.0
 
@@ -45,8 +45,8 @@ class UsageEvent:
 
 @dataclass
 class UsageEventContext:
-    provider: str = None
-    http_data: HttpData = None
+    provider: Optional[str] = None
+    http_data: Optional[HttpData] = None
     usage: dict[str, Any] = field(default_factory=dict)
     context: dict[str, Any] = field(default_factory=dict)
 

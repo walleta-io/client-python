@@ -1,6 +1,8 @@
 import logging
 import time
 
+from typing import Any
+
 from walleta import extractors
 from walleta.interceptors import register
 from walleta.models import UsageEvent, HttpData
@@ -75,7 +77,7 @@ def _patch_response_close(response, handler, ctx) -> None:
     response.aclose = aclose
 
 
-def _patch_httx_send(Client: Any) -> None:
+def _patch_httpx_send(Client: Any) -> None:
     def _patched_httpx_send(self, request, *args, **kwargs):
         with timer() as t:
             response = _original_httpx_send(self, request, *args, **kwargs)
@@ -127,9 +129,11 @@ def _patch_httpx_async_send(AsyncClient: Any) -> None:
         handler = extractors.search(http_data)
         if not handler:
             return response
-        return _patch_response(http_data, response, handler, ctx)
+        _patch_response_read(response, handler, ctx)
+        _path_response_close(request, handler, ctx)
+        return response
 
-    AsyncClient.asend = _patched_httpx_asend
+    AsyncClient.send = _patched_httpx_asend
 
 
 @register

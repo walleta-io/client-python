@@ -1,6 +1,14 @@
 import warnings
 import threading
 
+
+try:
+    from typing import Self
+
+except ImportError:
+    from typing_extensions import Self
+
+
 # ContextVar fallback for Python < 3.7
 try:
     from contextvars import ContextVar

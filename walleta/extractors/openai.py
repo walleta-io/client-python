@@ -6,6 +6,13 @@ from walleta.models import HttpData, UsageEventContext
 from walleta.extractors import ResponseHandler, register
 
 
+TOKEN_PATTERNS = [
+    re.compile(r'"(%s)":\s*(\d+)' % token_name)
+    for token_name in (
+        'input', 'output', 'cached'
+    )
+]
+
 @register
 class OpenAIResponseHandler(ResponseHandler):
     def __init__(self, http_data: HttpData) -> None:
@@ -19,11 +26,12 @@ class OpenAIResponseHandler(ResponseHandler):
             decoded = line.decode(errors='ignore')
             if not decoded:
                 continue
-            for token in ('input', 'output', 'cached'):
-                m = re.search(r"%s:\s*(\d+)" % token, decoded)
-                if not m:
-                    continue
-                self._usage_data[token] = int(m.group(1))
+            self._usage_data.update({
+                m.group(1): int(m.group(2))
+                for pattern in TOKEN_PATTERNS
+                for m in (pattern.search(decoded),)
+                if m
+            })
 
     def handle_chunk(self, chunk: bytes) -> None:
         data = self._remaining + chunk
@@ -44,7 +52,7 @@ class OpenAIResponseHandler(ResponseHandler):
 
         event = UsageEventContext(
             provider='openai',
-            tokens=self._usage_data,
+            usage=self._usage_data,
             http_data=self.http_data,
         )
         return event

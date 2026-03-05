@@ -7,8 +7,10 @@ from walleta.interceptors import register
 from walleta.models import HttpData
 from walleta.context import _get_current_context
 
+
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
+
 
 try:
     _orig_request = aiohttp.ClientSession._request

@@ -1,6 +1,6 @@
 from typing import Callable
 
-from ..utils import _discover
+from walleta.utils import _discover
 
 
 INSTALLERS = []

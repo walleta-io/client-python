@@ -1,5 +1,5 @@
 from abc import ABC
-from abc import abstractmethod, abstractclassmethod
+from abc import abstractmethod
 from typing import Callable, Optional
 
 from walleta.models import HttpData, UsageEventContext
@@ -15,7 +15,8 @@ class ResponseHandler(ABC):
     def __init__(self, http_data: HttpData) -> None:
         self.http_data = http_data
 
-    @abstractclassmethod
+    @abstractmethod
+    @classmethod
     def match(cls, http_data: HttpData) -> bool:
         return http_data.host == cls.host
 
@@ -35,7 +36,7 @@ def register(f: Callable) -> Callable:
 
 def search(http_data: HttpData) -> Optional[ResponseHandler]:
     for extractor_cls in EXTRACTORS:
-        if extractor.match(http_data):
+        if extractor_cls.match(http_data):
             return extractor_cls(http_data)
 
 
